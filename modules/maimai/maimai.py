@@ -21,7 +21,8 @@ mai = module('maimai',
              developers=['mai-bot', 'OasisAkari', 'DoroWolf'],
              alias='mai',
              support_languages=['zh_cn'],
-             desc='{maimai.help.desc}')
+             desc='{maimai.help.desc}',
+             doc=True)
 
 
 @mai.command('base <constant> [<constant_max>] [-p <page>] {{maimai.help.base}}',
@@ -225,13 +226,13 @@ async def _(msg: Bot.MessageSession, username: str = None):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username, 'b50': True}
+        use_cache = True
     else:
         payload = {'username': username, 'b50': True}
-    try:
-        img = await generate(msg, payload)
-        await msg.finish([BImage(img)])
-    except BaseException:
-        Logger.error(traceback.format_exc())
+        use_cache = False
+
+    img = await generate(msg, payload, use_cache)
+    await msg.finish([BImage(img)])
 
 
 @mai.command('id <id> [-c] {{maimai.help.id}}')
@@ -344,7 +345,7 @@ async def _(msg: Bot.MessageSession, id_or_alias: str, diff: str = None):
                         touch=chart['notes'][3],
                         brk=chart['notes'][4],
                         charter=chart['charter']))
-                
+
         await msg.finish(await get_info(music, Plain('\n'.join(res))))
     else:
         res = msg.locale.t(
@@ -395,10 +396,12 @@ async def query_song_info(msg, query, username):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
-    output = await get_player_score(msg, payload, sid)
+    output = await get_player_score(msg, payload, sid, use_cache)
     await msg.finish(await get_info(music, Plain(output)))
 
 
@@ -416,13 +419,15 @@ async def query_plate(msg, plate, username):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
     if plate in ['真将', '真將'] or (plate[1] == '者' and plate[0] != '霸'):
         await msg.finish(msg.locale.t('maimai.message.plate.plate_not_found'))
 
-    output, get_img = await get_plate_process(msg, payload, plate)
+    output, get_img = await get_plate_process(msg, payload, plate, use_cache)
 
     if get_img:
         img = await msgchain2image([Plain(output)], msg)
@@ -453,15 +458,17 @@ async def query_process(msg, level, goal, username):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
     if level not in level_list:
         await msg.finish(msg.locale.t("maimai.message.level_invalid"))
     if goal.upper() not in goal_list:
         await msg.finish(msg.locale.t("maimai.message.goal_invalid"))
 
-    output, get_img = await get_level_process(msg, payload, level, goal)
+    output, get_img = await get_level_process(msg, payload, level, goal, use_cache)
 
     if get_img:
         img = await msgchain2image([Plain(output)])
@@ -483,10 +490,12 @@ async def _(msg: Bot.MessageSession, username: str = None):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
-    await get_rank(msg, payload)
+    await get_rank(msg, payload, use_cache)
 
 
 @mai.command('scorelist <level> [-p <page>] [-u <username>] {{maimai.help.scorelist}}',
@@ -505,10 +514,12 @@ async def _(msg: Bot.MessageSession, level: str):
             if not username:
                 await msg.finish(msg.locale.t("maimai.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
-    output, get_img = await get_score_list(msg, payload, level, page)
+    output, get_img = await get_score_list(msg, payload, level, page, use_cache)
 
     if get_img:
         img = await msgchain2image([Plain(output)])
@@ -616,7 +627,7 @@ async def _(msg: Bot.MessageSession, base: float, score: float):
 
 @mai.command('update', required_superuser=True)
 async def _(msg: Bot.MessageSession):
-    if await update_alias() and await update_cover():
+    if await update_alias() and await update_cover() and await total_list.update():
         await msg.finish(msg.locale.t("success"))
     else:
         await msg.finish(msg.locale.t("failed"))

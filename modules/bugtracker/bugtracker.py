@@ -1,5 +1,4 @@
 import os
-import traceback
 
 import aiohttp
 import ujson as json
@@ -24,16 +23,16 @@ async def make_screenshot(page_link, use_local=True):
     Logger.info('[Webrender] Generating element screenshot...')
     try:
         img = await download(webrender('element_screenshot', use_local=use_local),
-                                      status_code=200,
-                                      headers={'Content-Type': 'application/json'},
-                                      method="POST",
-                                      post_data=json.dumps({
-                                          'url': page_link,
-                                          'element': elements_}),
-                                      attempt=1,
-                                      timeout=30,
-                                      request_private_ip=True
-                                      )
+                             status_code=200,
+                             headers={'Content-Type': 'application/json'},
+                             method="POST",
+                             post_data=json.dumps({
+                                 'url': page_link,
+                                 'element': elements_}),
+                             attempt=1,
+                             timeout=30,
+                             request_private_ip=True
+                             )
         if img:
             return img
         else:
@@ -59,7 +58,7 @@ async def bugtracker_get(msg, mojira_id: str):
         if str(e).startswith('401'):
             return msg.locale.t("bugtracker.message.get_failed"), None
         else:
-            Logger.error(traceback.format_exc())
+            raise e
     if mojira_id not in spx_cache:
         get_spx = await get_url('https://spxx-db.teahouse.team/crowdin/zh-CN/zh_CN.json', 200)
         if get_spx:

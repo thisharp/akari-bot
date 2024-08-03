@@ -2,11 +2,16 @@ from core.builtins import Bot
 from core.component import module
 from .process import process_expression
 
-dice = module('dice', alias=['rd', 'roll'], developers=['Light-Beacon', 'DoroWolf'], desc='{dice.help.desc}')
+dice = module('dice', alias=['rd', 'roll'], developers=['Light-Beacon', 'DoroWolf'], desc='{dice.help.desc}', doc=True)
+
+
+@dice.command()
+async def _(msg: Bot.MessageSession):
+    await msg.finish(await process_expression(msg, 'D', None))
 
 
 @dice.command('<dices> [<dc>] {{dice.help}}')
-async def _(msg: Bot.MessageSession, dices: str, dc=None):
+async def _(msg: Bot.MessageSession, dices: str, dc: int = None):
     await msg.finish(await process_expression(msg, dices, dc))
 
 

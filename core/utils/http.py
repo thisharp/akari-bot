@@ -160,8 +160,8 @@ async def post_url(url: str, data: any = None, status_code: int = False, headers
 
 
 async def download(url: str, filename=None, path=None, status_code: int = False, method="GET", post_data=None,
-                            headers: dict = None, timeout=20, attempt=3, request_private_ip=False,
-                            logging_err_resp=True) -> Union[str, bool]:
+                   headers: dict = None, timeout=20, attempt=3, request_private_ip=False,
+                   logging_err_resp=True) -> Union[str, bool]:
     '''利用AioHttp下载指定url的内容，并保存到指定目录。
 
     :param url: 需要获取的url。
@@ -187,7 +187,6 @@ async def download(url: str, filename=None, path=None, status_code: int = False,
             private_ip_check(url)
 
         data = None
-
         if method.upper() == 'GET':
             data = await get_url(url, status_code=status_code, headers=headers, fmt='read', timeout=timeout, attempt=1,
                                  request_private_ip=request_private_ip, logging_err_resp=logging_err_resp)

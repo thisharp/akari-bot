@@ -20,7 +20,6 @@ from core.builtins.message import MessageSession as MessageSessionT
 from core.builtins.message.chain import MessageChain
 from core.exceptions import SendMessageFailed
 from core.logger import Logger
-from core.queue import JobQueue
 from core.types import FetchTarget as FetchTargetT, FinishedSession as FinS
 from core.utils.image import msgchain2image
 from core.utils.storedata import get_stored_list
@@ -223,8 +222,18 @@ class MessageSession(MessageSessionT):
                 if s.startswith('[CQ:image'):
                     sspl = s.split(',')
                     for ss in sspl:
-                        if ss.startswith('url='):
-                            lst.append(Image(ss[4:-1]))
+                        if qq_frame_type() == 'lagrange':
+                            if ss.startswith('file='):
+                                ss = ss[5:]
+                                if ss.endswith(']'):
+                                    ss = ss[:-1]
+                                lst.append(Image(ss))
+                        else:
+                            if ss.startswith('url='):
+                                ss = ss[4:]
+                                if ss.endswith(']'):
+                                    ss = ss[:-1]
+                                lst.append(Image(ss))
             else:
                 lst.append(Plain(s))
 
@@ -262,6 +271,8 @@ class MessageSession(MessageSessionT):
                     elif qq_frame_type() == 'mirai':
                         await bot.send_group_msg(group_id=self.msg.session.target,
                                                  message=f'[CQ:poke,qq={self.msg.session.sender}]')
+                    else:
+                        pass
 
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             pass

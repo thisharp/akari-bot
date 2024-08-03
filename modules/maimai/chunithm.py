@@ -13,6 +13,7 @@ diff_label = ['Basic', 'Advanced', 'Expert', 'Master', 'Ultima']
 
 chu = module('chunithm',
              developers=['DoroWolf'],
+             doc=True,
              alias='chu',
              support_languages=['zh_cn'],
              desc='{chunithm.help.desc}')
@@ -142,10 +143,12 @@ async def _(msg: Bot.MessageSession, username: str = None):
             if not username:
                 await msg.finish(msg.locale.t("chunithm.message.user_unbound", prefix=msg.prefixes[0]))
             payload = {'username': username}
+        use_cache = True
     else:
         payload = {'username': username}
+        use_cache = False
 
-    img = await generate_best30_text(msg, payload)
+    img = await generate_best30_text(msg, payload, use_cache)
     await msg.finish([BImage(img)])
 
 
@@ -194,11 +197,11 @@ async def _(msg: Bot.MessageSession, song: str, diff: str = None):
     else:
         if len(music['ds']) == 6:
             res = msg.locale.t(
-            "chunithm.message.song.worlds_end",
-            artist=music['basic_info']['artist'],
-            genre=music['basic_info']['genre'],
-            bpm=music['basic_info']['bpm'],
-            version=music['basic_info']['from'])
+                "chunithm.message.song.worlds_end",
+                artist=music['basic_info']['artist'],
+                genre=music['basic_info']['genre'],
+                bpm=music['basic_info']['bpm'],
+                version=music['basic_info']['from'])
         else:
             res = msg.locale.t(
                 "chunithm.message.song",

@@ -113,15 +113,17 @@ class BotDBUtil:
                 return {}
             return json.loads(self.query.options)
 
-        def get_option(self, k=None):
-            if not self.query and not k:
-                return {}
-            elif not self.query and k:
-                return None
-            if not k:
-                return self.options
+        def get_option(self, k=None, default=None):
+            if not self.query:
+                if not k:
+                    return {}
+                else:
+                    return default
             else:
-                return self.options.get(k)
+                if not k:
+                    return self.options
+                else:
+                    return self.options.get(k, default)
 
         @retry(stop=stop_after_attempt(3))
         @auto_rollback_error
@@ -226,21 +228,53 @@ class BotDBUtil:
             return True
 
     class SenderInfo:
-        @retry(stop=stop_after_attempt(3))
-        @auto_rollback_error
         def __init__(self, sender_id):
             self.sender_id = sender_id
             self.query = self.query_SenderInfo
-            if not self.query:
-                session.add_all([SenderInfo(id=sender_id)])
-                session.commit()
-                self.query = session.query(SenderInfo).filter_by(id=sender_id).first()
 
         @property
-        @retry(stop=stop_after_attempt(3))
-        @auto_rollback_error
         def query_SenderInfo(self):
             return session.query(SenderInfo).filter_by(id=self.sender_id).first()
+
+        @retry(stop=stop_after_attempt(3))
+        @auto_rollback_error
+        def init(self):
+            if not self.query:
+                session.add_all([SenderInfo(id=self.sender_id)])
+                session.commit()
+                return self.query_SenderInfo
+            else:
+                return self.query
+
+        @property
+        def is_in_block_list(self):
+            if not self.query:
+                return False
+            return self.query.isInBlockList
+
+        @property
+        def is_in_allow_list(self):
+            if not self.query:
+                return False
+            return self.query.isInAllowList
+
+        @property
+        def is_super_user(self):
+            if not self.query:
+                return False
+            return self.query.isSuperUser
+
+        @property
+        def warns(self):
+            if not self.query:
+                return 0
+            return self.query.warns
+
+        @property
+        def disable_typing(self):
+            if not self.query:
+                return False
+            return self.query.disable_typing
 
         @retry(stop=stop_after_attempt(3))
         @auto_rollback_error
@@ -377,7 +411,7 @@ class BotDBUtil:
 
         @retry(stop=stop_after_attempt(3))
         @auto_rollback_error
-        def add_and_check(self, action='default', detail='') -> bool:
+        def add(self, action='default', detail=''):
             """
 
             :return: True = yes, False = no
@@ -385,7 +419,6 @@ class BotDBUtil:
             session.add_all([UnfriendlyActionsTable(targetId=self.target_id,
                                                     senderId=self.sender_id, action=action, detail=detail)])
             session.commit()
-            return self.check_mute()
 
     class JobQueue:
 

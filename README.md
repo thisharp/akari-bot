@@ -3,13 +3,21 @@
 
 # 小可 · AkariBot v4
 
-</div>
+_基于 OneBot 11 开发的可扩展、多平台机器人_
 
-![GitHub issues](https://img.shields.io/github/issues/Teahouse-Studios/akari-bot) ![GitHub pull requests](https://img.shields.io/github/issues-pr/Teahouse-Studios/akari-bot) ![License](https://img.shields.io/github/license/Teahouse-Studios/akari-bot) ![GitHub tag](https://img.shields.io/github/v/tag/Teahouse-Studios/akari-bot?include_prereleases) [![Crowdin](https://badges.crowdin.net/akari-bot/localized.svg)](https://crowdin.com/project/akari-bot) ![GitHub Repo stars](https://img.shields.io/github/stars/Teahouse-Studios/akari-bot?style=social)
+[![GitHub issues](https://img.shields.io/github/issues/Teahouse-Studios/akari-bot)](https://github.com/Teahouse-Studios/akari-bot/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Teahouse-Studios/akari-bot)](https://github.com/Teahouse-Studios/akari-bot/pulls)<!--![GitHub tag](https://img.shields.io/github/v/tag/Teahouse-Studios/akari-bot?include_prereleases)-->
+[![Crowdin](https://badges.crowdin.net/akari-bot/localized.svg)](https://crowdin.com/project/akari-bot)
+![GitHub Repo stars](https://img.shields.io/github/stars/Teahouse-Studios/akari-bot?style=social)
+<br>
+![Python](https://img.shields.io/badge/Python-3.12+-blue)
+![OneBot v11](https://img.shields.io/badge/OneBot-v11-black)
+[![License](https://img.shields.io/github/license/Teahouse-Studios/akari-bot)](https://github.com/Teahouse-Studios/akari-bot/blob/master/LICENSE)
+</div>
 
 ## 介绍
 
-**小可**是基于多个框架开发的可扩展、多平台机器人。当前形象由 [OasisAkari](https://github.com/OasisAkari) 绘制。
+**小可**是基于 OneBot 11 开发的可扩展、多平台机器人。当前形象由 [OasisAkari](https://github.com/OasisAkari) 绘制。
 
 目前小可还正在持续开发中。
 
