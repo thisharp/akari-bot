@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Union
 
 from inputimeout import inputimeout, TimeoutOccurred
-from PIL import Image as PImage
+from PIL import Image as PILImage
 
 from config import Config
 from core.builtins import (Plain, I18NContext, Image, confirm_command, Bot, FetchTarget as FetchTargetT,
@@ -33,7 +33,7 @@ class MessageSession(MessageSessionT):
         wait = True
 
     async def send_message(self, message_chain, quote=True, disable_secret_check=False,
-                           allow_split_image=True, callback=None) -> FinishedSession:
+                           enable_parse_message=True, enable_split_image=True, callback=None) -> FinishedSession:
         message_chain = MessageChain(message_chain)
         self.sent.append(message_chain)
         for x in message_chain.as_sendable(self, embed=False):
@@ -42,7 +42,7 @@ class MessageSession(MessageSessionT):
                 Logger.info(f'[Bot] -> [{self.target.target_id}]: {x.text}')
             elif isinstance(x, Image):
                 image_path = await x.get()
-                img = PImage.open(image_path)
+                img = PILImage.open(image_path)
                 img.show()
                 Logger.info(f'[Bot] -> [{self.target.target_id}]: Image: {image_path}')
         return FinishedSession(self, [0], ['Should be a callable here... hmm...'])

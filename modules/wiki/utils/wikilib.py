@@ -354,6 +354,18 @@ class WikiLib:
         api = self.wiki_info.api
         return await self.get_json_from_api(api, _no_login=_no_login, **kwargs)
 
+    async def return_api(self, _no_login=False, _no_format=False, **kwargs) -> str:
+        await self.fixup_wiki_info()
+        api = self.wiki_info.api
+        if api in redirect_list:
+            api = redirect_list[api]
+        if kwargs:
+            api = api + '?' + urllib.parse.urlencode(kwargs) + ('&format=json' if not _no_format else '')
+            Logger.debug(api)
+        else:
+            raise ValueError('kwargs is None')
+        return api
+
     @staticmethod
     def parse_text(text):
         try:
@@ -701,26 +713,30 @@ class WikiLib:
                                 page_info.possible_research_title = searched_result
                 else:
                     page_info.status = True
-                    page_info.body_class = await self.get_page_body_class(page_info.title)
-                    if 'ns-talk' in page_info.body_class:
-                        page_info.is_talk_page = True
-                    stp = special_talk_page_class.get(page_info.info.api, [])
-                    for sc in stp:
-                        if sc in page_info.body_class:
+                    try:
+                        page_info.body_class = await self.get_page_body_class(page_info.title)
+                        if 'ns-talk' in page_info.body_class:
                             page_info.is_talk_page = True
-                            break
-                    sfp = forum_class.get(page_info.info.api, [])
-                    for fc in sfp:
-                        if fc in page_info.body_class:
-                            page_info.is_forum = True
-                            page_info.forum_data = await self.get_forums_data(page_info.title)
-                            break
-                    if not page_info.is_forum:
-                        for bc in page_info.body_class:
-                            for fc in sfp:
-                                if bc.startswith(fc):
-                                    page_info.is_forum_topic = True
-                                    break
+                        stp = special_talk_page_class.get(page_info.info.api, [])
+                        for sc in stp:
+                            if sc in page_info.body_class:
+                                page_info.is_talk_page = True
+                                break
+                        sfp = forum_class.get(page_info.info.api, [])
+                        for fc in sfp:
+                            if fc in page_info.body_class:
+                                page_info.is_forum = True
+                                page_info.forum_data = await self.get_forums_data(page_info.title)
+                                break
+                        if not page_info.is_forum:
+                            for bc in page_info.body_class:
+                                for fc in sfp:
+                                    if bc.startswith(fc):
+                                        page_info.is_forum_topic = True
+                                        break
+                    except Exception:
+                        Logger.error(traceback.format_exc())
+
                     templates = page_info.templates = [t['title'] for t in page_raw.get('templates', [])]
                     if selected_section or page_info.invalid_section or page_info.is_talk_page:
                         parse_section_string = {'action': 'parse', 'page': page_info.title, 'prop': 'sections'}
@@ -825,7 +841,7 @@ class WikiLib:
                             page_info.link = full_url
                             page_info.file = file
                             page_info.desc = page_desc
-                            if not _iw and not page_info.args and page_info.id != -1:
+                            if not _iw and not page_info.args and page_info.id != -1 and page_info.id:
                                 page_info.link = self.wiki_info.script + f'?curid={page_info.id}'
                         else:
                             page_info.title = query_langlinks.title
@@ -858,7 +874,7 @@ class WikiLib:
                         page_info.before_title = before_page_info.title
                         t = page_info.title
                         if t:
-                            if before_page_info.args or page_info.id == -1:
+                            if before_page_info.args or page_info.id == -1 or not page_info.id:
                                 page_info.before_title += urllib.parse.unquote(before_page_info.args)
                                 t += urllib.parse.unquote(before_page_info.args)
                                 if page_info.link:

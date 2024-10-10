@@ -45,12 +45,13 @@ async def _(msg: Bot.MessageSession, constant: float, constant_max: float = None
 
     for music in sorted(data, key=lambda i: int(i['id'])):
         for i in music.diff:
-            result_set.append((music['id'],
-                               music['title'],
-                               music['ds'][i],
-                               diff_list[i],
-                               music['level'][i],
-                               music['type']))
+            if int(music['id']) < 100000:  # 过滤宴谱
+                result_set.append((music['id'],
+                                   music['title'],
+                                   music['ds'][i],
+                                   diff_list[i],
+                                   music['level'][i],
+                                   music['type']))
 
     total_pages = (len(result_set) + SONGS_PER_PAGE - 1) // SONGS_PER_PAGE
     get_page = msg.parsed_msg.get('-p', False)
@@ -69,9 +70,12 @@ async def _(msg: Bot.MessageSession, constant: float, constant_max: float = None
         await msg.finish(s.strip())
     else:
         s += msg.locale.t("maimai.message.pages", page=page, total_pages=total_pages)
-        img = await msgchain2image([Plain(s)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(s)])
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(s)
 
@@ -83,12 +87,13 @@ async def _(msg: Bot.MessageSession, level: str):
     data = (await total_list.get()).filter(level=level)
     for music in sorted(data, key=lambda i: int(i['id'])):
         for i in music.diff:
-            result_set.append((music['id'],
-                               music['title'],
-                               music['ds'][i],
-                               diff_list[i],
-                               music['level'][i],
-                               music['type']))
+            if int(music['id']) < 100000:  # 过滤宴谱
+                result_set.append((music['id'],
+                                   music['title'],
+                                   music['ds'][i],
+                                   diff_list[i],
+                                   music['level'][i],
+                                   music['type']))
     total_pages = (len(result_set) + SONGS_PER_PAGE - 1) // SONGS_PER_PAGE
     get_page = msg.parsed_msg.get('-p', False)
     page = max(min(int(get_page['<page>']), total_pages), 1) if get_page and isint(get_page['<page>']) else 1
@@ -105,9 +110,12 @@ async def _(msg: Bot.MessageSession, level: str):
         await msg.finish(s.strip())
     else:
         s += msg.locale.t("maimai.message.pages", page=page, total_pages=total_pages)
-        img = await msgchain2image([Plain(s)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(s)])
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(s)
 
@@ -138,9 +146,12 @@ async def _(msg: Bot.MessageSession):
         await msg.finish(s.strip())
     else:
         s += msg.locale.t("maimai.message.pages", page=page, total_pages=total_pages)
-        img = await msgchain2image([Plain(s)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(s)])
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(s)
 
@@ -169,9 +180,12 @@ async def _(msg: Bot.MessageSession, keyword: str):
         await msg.finish(s.strip())
     else:
         s += msg.locale.t("maimai.message.pages", page=page, total_pages=total_pages)
-        img = await msgchain2image([Plain(s)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(s)])
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(s)
 
@@ -322,7 +336,7 @@ async def _(msg: Bot.MessageSession, id_or_alias: str):
                     touch=chart['notes'][3],
                     brk=chart['notes'][4]))
                 if diff >= 2:
-                    res.append(msg.locale.t("maimai.message.chart.charter") + chart['charter'])  
+                    res.append(msg.locale.t("maimai.message.chart.charter") + chart['charter'])
 
     await msg.finish(await get_info(music, Plain('\n'.join(res))))
 
@@ -447,9 +461,12 @@ async def query_plate(msg, plate, username):
     output, get_img = await get_plate_process(msg, payload, plate, use_cache)
 
     if get_img:
-        img = await msgchain2image([Plain(output)], msg)
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(output)], msg)
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(output.strip())
     else:
@@ -483,9 +500,12 @@ async def query_process(msg, level, goal, username):
     output, get_img = await get_level_process(msg, payload, level, goal, use_cache)
 
     if get_img:
-        img = await msgchain2image([Plain(output)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(output)], msg)
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(output.strip())
     else:
@@ -534,9 +554,12 @@ async def _(msg: Bot.MessageSession, level: str):
     output, get_img = await get_score_list(msg, payload, level, page, use_cache)
 
     if get_img:
-        img = await msgchain2image([Plain(output)])
-        if img:
-            await msg.finish([BImage(img)])
+        imgs = await msgchain2image([Plain(output)], msg)
+        if imgs:
+            imgchain = []
+            for img in imgs:
+                imgchain.append(BImage(img))
+            await msg.finish(imgchain)
         else:
             await msg.finish(output.strip())
     else:

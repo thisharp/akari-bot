@@ -4,7 +4,9 @@ import shutil
 import sys
 from datetime import datetime
 
+
 import ujson as json
+
 
 from config import Config, CFG
 from core.builtins import Bot, I18NContext, PrivateAssets, Plain, ExecutionLockList, Temp, MessageTaskManager
@@ -13,11 +15,11 @@ from core.exceptions import NoReportException, TestException
 from core.loader import ModulesManager
 from core.logger import Logger
 from core.parser.message import check_temp_ban, remove_temp_ban
-from core.queue import JobQueue
 from core.tos import pardon_user, warn_user
+from core.types import Param
 from core.utils.info import Info
 from core.utils.storedata import get_stored_list, update_stored_list
-from core.utils.text import isfloat, isint
+from core.utils.text import isfloat, isint, decrypt_string
 from database import BotDBUtil
 
 
@@ -32,7 +34,7 @@ su = module('superuser', alias='su', required_superuser=True, base=True, doc=Tru
 
 @su.command('add <user>')
 async def add_su(msg: Bot.MessageSession, user: str):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     if user:
         if BotDBUtil.SenderInfo(user).edit('isSuperUser', True):
@@ -41,7 +43,7 @@ async def add_su(msg: Bot.MessageSession, user: str):
 
 @su.command('remove <user>')
 async def del_su(msg: Bot.MessageSession, user: str):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     if user == msg.target.sender_id:
         confirm = await msg.wait_confirm(msg.locale.t("core.message.admin.remove.confirm"), append_instruction=False)
@@ -77,7 +79,7 @@ set_ = module('set', required_superuser=True, base=True, doc=True)
               'module disable <target> <modules> ...',
               'module list <target>')
 async def _(msg: Bot.MessageSession, target: str):
-    if not any(target.startswith(f'{target_from}|') for target_from in target_list):
+    if not target.startswith(f'{msg.target.target_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.target", target=msg.target.target_from))
     target_data = BotDBUtil.TargetInfo(target)
     if not target_data.query:
@@ -112,7 +114,7 @@ async def _(msg: Bot.MessageSession, target: str):
               'option edit <target> <k> <v>',
               'option remove <target> <k>')
 async def _(msg: Bot.MessageSession, target: str):
-    if not any(target.startswith(f'{target_from}|') for target_from in target_list):
+    if not target.startswith(f'{msg.target.target_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.target", target=msg.target.target_from))
     target_data = BotDBUtil.TargetInfo(target)
     if not target_data.query:
@@ -188,7 +190,7 @@ async def _(msg: Bot.MessageSession, user: str, count: int = 1):
 
 @ae.command('revoke <user> [<count>]')
 async def _(msg: Bot.MessageSession, user: str, count: int = 1):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     warn_count = await warn_user(user, -count)
     await msg.finish(msg.locale.t("core.message.abuse.revoke.success", user=user, count=count, warn_count=warn_count))
@@ -196,7 +198,7 @@ async def _(msg: Bot.MessageSession, user: str, count: int = 1):
 
 @ae.command('clear <user>')
 async def _(msg: Bot.MessageSession, user: str):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     await pardon_user(user)
     await msg.finish(msg.locale.t("core.message.abuse.clear.success", user=user))
@@ -212,7 +214,7 @@ async def _(msg: Bot.MessageSession, user: str):
 
 @ae.command('ban <user>')
 async def _(msg: Bot.MessageSession, user: str):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     sender_info = BotDBUtil.SenderInfo(user)
     if sender_info.edit('isInBlockList', True) and sender_info.edit('isInAllowList', False):
@@ -221,7 +223,7 @@ async def _(msg: Bot.MessageSession, user: str):
 
 @ae.command('unban <user>')
 async def _(msg: Bot.MessageSession, user: str):
-    if not any(user.startswith(f'{sender_from}|') for sender_from in sender_list):
+    if not user.startswith(f'{msg.target.sender_from}|'):
         await msg.finish(msg.locale.t("message.id.invalid.sender", sender=msg.target.sender_from))
     sender_info = BotDBUtil.SenderInfo(user)
     if sender_info.edit('isInBlockList', False):
@@ -441,10 +443,18 @@ if Bot.FetchTarget.name == 'QQ':
 
 echo = module('echo', required_superuser=True, base=True, doc=True)
 
-
-@echo.command('<display_msg>')
-async def _(msg: Bot.MessageSession, display_msg: str):
-    await msg.finish(display_msg)
+if Bot.client_name == 'QQ':
+    @echo.command()
+    @echo.command('[<display_msg>]')
+    async def _(msg: Bot.MessageSession, dis: Param("<display_msg>", str) = None):
+        if not dis:
+            msg = await msg.wait_next_message(msg.locale.t("core.message.echo.prompt"), delete=True, append_instruction=False)
+            dis = msg.as_display()
+        await msg.finish(dis, enable_parse_message=False)
+else:
+    @echo.command('<display_msg>')
+    async def _(msg: Bot.MessageSession, dis: Param("<display_msg>", str) = None):
+        await msg.finish(dis)
 
 
 say = module('say', required_superuser=True, base=True, doc=True)
@@ -562,3 +572,15 @@ jobqueue = module('jobqueue', required_superuser=True, base=True)
 async def stop_playing_maimai(msg: Bot.MessageSession):
     BotDBUtil.JobQueue.clear(0)
     await msg.finish(msg.locale.t("success"))
+
+
+decry = module('decrypt', required_superuser=True, base=True, doc=True)
+
+
+@decry.command('<display_msg>')
+async def _(msg: Bot.MessageSession):
+    dec = decrypt_string(msg.as_display().split(' ', 1)[1])
+    if dec:
+        await msg.finish(dec)
+    else:
+        await msg.finish(msg.locale.t("failed"))

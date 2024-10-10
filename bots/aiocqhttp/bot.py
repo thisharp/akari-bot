@@ -1,6 +1,5 @@
 import html
 import logging
-import os
 import re
 import sys
 
@@ -11,18 +10,18 @@ from bots.aiocqhttp.client import bot
 from bots.aiocqhttp.info import client_name
 from bots.aiocqhttp.message import MessageSession, FetchTarget
 from config import Config
+from core.bot import load_prompt, init_async
 from core.builtins import EnableDirtyWordCheck, PrivateAssets, Url
 from core.parser.message import parser
 from core.tos import tos_report
 from core.types import MsgInfo, Session
-from core.utils.bot import load_prompt, init_async
 from core.utils.info import Info
 from core.utils.i18n import Locale, default_locale
 from database import BotDBUtil
 
 PrivateAssets.set('assets/private/aiocqhttp')
-EnableDirtyWordCheck.status = True if Config('enable_dirty_check', False) else False
-Url.disable_mm = False if Config('enable_urlmanager', False) else True
+EnableDirtyWordCheck.status = Config('enable_dirty_check', False)
+Url.disable_mm = not Config('enable_urlmanager', False)
 qq_account = str(Config("qq_account", cfg_type=(int, str)))
 enable_listening_self_message = Config("qq_enable_listening_self_message", False)
 
@@ -48,30 +47,46 @@ async def message_handler(event: Event):
                 return await bot.send(event, Locale(default_locale).t('qq.prompt.disable_temp_session'))
     if event.user_id in ignore_ids:
         return
+    string_post = False
+    if isinstance(event.message, str):
+        string_post = True
 
-    filter_msg = re.match(r'.*?\[CQ:(?:json|xml).*?\].*?|.*?<\?xml.*?>.*?', event.message, re.MULTILINE | re.DOTALL)
-    if filter_msg:
-        match_json = re.match(r'.*?\[CQ:json,data=(.*?)\].*?', event.message, re.MULTILINE | re.DOTALL)
+    if string_post:
+        match_json = re.match(r'\[CQ:json,data=(.*?)\]', event.message, re.MULTILINE | re.DOTALL)
         if match_json:
             load_json = json.loads(html.unescape(match_json.group(1)))
             if load_json['app'] == 'com.tencent.multimsg':
                 event.message = f'[CQ:forward,id={load_json["meta"]["detail"]["resid"]}]'
-            else:
-                return
-        else:
-            return
+    else:
+        if event.message[0]["type"] == "json":
+            load_json = json.loads(event.message[0]["data"]["data"])
+            if load_json['app'] == 'com.tencent.multimsg':
+                event.message = [{"type": "forward", "data": {"id": f"{load_json["meta"]["detail"]["resid"]}"}}]
+
     reply_id = None
-    match_reply = re.match(r'^\[CQ:reply,id=(-?\d+).*\].*', event.message)
-    if match_reply:
-        reply_id = int(match_reply.group(1))
+    if string_post:
+        match_reply = re.match(r'^\[CQ:reply,id=(-?\d+).*\].*', event.message)
+        if match_reply:
+            reply_id = int(match_reply.group(1))
+    else:
+        if event.message[0]["type"] == "reply":
+            reply_id = int(event.message[0]["data"]["id"])
 
     prefix = None
-    if match_at := re.match(r'^\[CQ:at,qq=(\d+).*\](.*)', event.message):
-        if match_at.group(1) == qq_account:
-            event.message = match_at.group(2)
-            if event.message in ['', ' ']:
-                event.message = 'help'
-            prefix = ['']
+    if string_post:
+        if match_at := re.match(r'^\[CQ:at,qq=(\d+).*\](.*)', event.message):
+            if match_at.group(1) == qq_account:
+                event.message = match_at.group(2)
+                if event.message in ['', ' ']:
+                    event.message = 'help'
+                prefix = ['']
+    else:
+        if event.message[0]["type"] == "at":
+            if event.message[0]["data"]["qq"] == qq_account:
+                event.message = event.message[1:]
+                if not event.message:
+                    event.message = [{"type": "text", "data": {"text": "help"}}]
+                prefix = ['']
 
     target_id = f'Group|{str(event.group_id)}' if event.detail_type == 'group' else f'Private|{str(event.user_id)}'
 
@@ -203,6 +218,7 @@ async def _(event: Event):
 qq_host = Config("qq_host", cfg_type=str)
 if qq_host:
     argv = sys.argv
+    Info.client_name = client_name
     if 'subprocess' in sys.argv:
         Info.subprocess = True
     host, port = qq_host.split(':')
