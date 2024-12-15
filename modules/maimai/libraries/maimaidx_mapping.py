@@ -1,22 +1,66 @@
 import os
 
-from config import Config
+from core.config import Config
+from core.constants.path import assets_path
 
-
-DEVELOPER_TOKEN = Config('diving_fish_developer_token', cfg_type=str)
+DEVELOPER_TOKEN = Config("diving_fish_developer_token", cfg_type=str, secret=True)
 SONGS_PER_PAGE = 30
 SONGS_NEED_IMG = 10
 
-assets_path = os.path.abspath('./assets/maimai/')
-cover_dir = os.path.join(assets_path, "static", "mai", "cover")
-grade_info_path = os.path.join(assets_path, "mai_grade_info.json")
-song_alias_path = os.path.join(assets_path, "mai_song_alias.json")
-song_info_path = os.path.join(assets_path, "mai_song_info.json")
-utage_info_path = os.path.join(assets_path, "mai_utage_info.json")
+mai_assets_path = os.path.join(assets_path, "maimai")
+mai_cover_path = os.path.join(mai_assets_path, "static", "mai", "cover")
+mai_alias_path = os.path.join(mai_assets_path, "mai_song_alias.json")
+mai_grade_info_path = os.path.join(mai_assets_path, "mai_grade_info.json")
+mai_song_info_path = os.path.join(mai_assets_path, "mai_song_info.json")
+mai_utage_info_path = os.path.join(mai_assets_path, "mai_utage_info.json")
 
-achievement_list = [50.0, 60.0, 70.0, 75.0, 80.0, 90.0, 94.0, 97.0, 98.0, 99.0, 99.5, 100.0, 100.5]
-rate_list = ["D", "C", "B", "BB", "BBB", "A", "AA", "AAA", "S", "S+", "SS", "SS+", "SSS", "SSS+"]
-rate_list_raw = ["d", "c", "b", "bb", "bbb", "a", "aa", "aaa", "s", "sp", "ss", "ssp", "sss", "sssp"]
+achievement_list = [
+    50.0,
+    60.0,
+    70.0,
+    75.0,
+    80.0,
+    90.0,
+    94.0,
+    97.0,
+    98.0,
+    99.0,
+    99.5,
+    100.0,
+    100.5,
+]
+rate_list = [
+    "D",
+    "C",
+    "B",
+    "BB",
+    "BBB",
+    "A",
+    "AA",
+    "AAA",
+    "S",
+    "S+",
+    "SS",
+    "SS+",
+    "SSS",
+    "SSS+",
+]
+rate_list_raw = [
+    "d",
+    "c",
+    "b",
+    "bb",
+    "bbb",
+    "a",
+    "aa",
+    "aaa",
+    "s",
+    "sp",
+    "ss",
+    "ssp",
+    "sss",
+    "sssp",
+]
 score_to_rate = {
     (0.0, 50.0): "D",
     (50.0, 60.0): "C",
@@ -82,10 +126,50 @@ diffs = {
     4: "Re:MASTER",
 }
 
-level_list = ["1", "2", "3", "4", "5", "6", "7", "7+", "8", "8+", "9", "9+",
-              "10", "10+", "11", "11+", "12", "12+", "13", "13+", "14", "14+", "15"]
-goal_list = ["A", "AA", "AAA", "S", "S+", "SS", "SS+", "SSS", "SSS+",
-             "FC", "FC+", "AP", "AP+", "FS", "FS+", "FDX", "FDX+"]
+level_list = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "7+",
+    "8",
+    "8+",
+    "9",
+    "9+",
+    "10",
+    "10+",
+    "11",
+    "11+",
+    "12",
+    "12+",
+    "13",
+    "13+",
+    "14",
+    "14+",
+    "15",
+]
+goal_list = [
+    "A",
+    "AA",
+    "AAA",
+    "S",
+    "S+",
+    "SS",
+    "SS+",
+    "SSS",
+    "SSS+",
+    "FC",
+    "FC+",
+    "AP",
+    "AP+",
+    "FS",
+    "FS+",
+    "FDX",
+    "FDX+",
+]
 
 genre_i18n_mapping = {
     "流行&动漫": "POPS & ANIME",
@@ -99,25 +183,88 @@ genre_i18n_mapping = {
     "オンゲキCHUNITHM": "ONGEKI & CHUNITHM",
 }
 
-versions = ["maimai",
-            "maimai PLUS",
-            "maimai GreeN",
-            "maimai GreeN PLUS",
-            "maimai ORANGE",
-            "maimai ORANGE PLUS",
-            "maimai PiNK",
-            "maimai PiNK PLUS",
-            "maimai MURASAKi",
-            "maimai MURASAKi PLUS",
-            "maimai MiLK",
-            "MiLK PLUS",
-            "maimai FiNALE",
-            "maimai でらっくす",
-            "maimai でらっくす Splash",
-            "maimai でらっくす UNiVERSE",
-            "maimai でらっくす FESTiVAL",
-            "maimai でらっくす BUDDiES",
-            ]
+mai_plate_remaster_required = [
+    17,
+    22,
+    23,
+    24,
+    58,
+    61,
+    62,
+    65,
+    66,
+    70,
+    71,
+    80,
+    81,
+    100,
+    107,
+    143,
+    145,
+    198,
+    200,
+    204,
+    226,
+    227,
+    247,
+    255,
+    256,
+    265,
+    266,
+    282,
+    295,
+    296,
+    299,
+    301,
+    310,
+    312,
+    365,
+    414,
+    496,
+    513,
+    532,
+    589,
+    741,
+    756,
+    759,
+    763,
+    777,
+    793,
+    799,
+    803,
+    806,
+    809,
+    812,
+    816,
+    818,
+    820,
+    825,
+    830,
+    833,
+    834,
+    838,
+]
+
+versions = [
+    "maimai",
+    "maimai PLUS",
+    "maimai GreeN",
+    "maimai GreeN PLUS",
+    "maimai ORANGE",
+    "maimai ORANGE PLUS",
+    "maimai PiNK",
+    "maimai PiNK PLUS",
+    "maimai MURASAKi",
+    "maimai MURASAKi PLUS",
+    "maimai MiLK",
+    "MiLK PLUS",
+    "maimai FiNALE",
+    "maimai でらっくす",
+    "maimai でらっくす Splash",
+    "maimai でらっくす UNiVERSE",
+    "maimai でらっくす FESTiVAL",
+    "maimai でらっくす BUDDiES",
+]
 
 sd_plate_mapping = {
     "初": "maimai",
@@ -145,6 +292,7 @@ dx_plate_mapping = {
     "祭": "maimai でらっくす FESTiVAL",
     "祝": "maimai でらっくす FESTiVAL",
     "双": "maimai でらっくす BUDDiES",
+    "宴": "maimai でらっくす BUDDiES",
 }
 
 plate_mapping = sd_plate_mapping | dx_plate_mapping

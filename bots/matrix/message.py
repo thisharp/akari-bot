@@ -7,23 +7,21 @@ from typing import List, Union
 import nio
 
 from bots.matrix.client import bot, homeserver_host
-from bots.matrix.info import client_name
-from config import Config
-from core.builtins import Bot, Plain, Image, Voice, MessageSession as MessageSessionT, I18NContext, MessageTaskManager
+from bots.matrix.info import *
+from core.builtins import Bot, Plain, Image, Voice, MessageSession as MessageSessionT, I18NContext, MessageTaskManager, \
+    FetchTarget as FetchedTargetT, FinishedSession as FinishedSessionT
 from core.builtins.message.chain import MessageChain
+from core.builtins.message.elements import PlainElement, ImageElement, VoiceElement
+from core.config import Config
+from core.database import BotDBUtil
 from core.logger import Logger
-from core.types import FetchTarget as FetchedTargetT, FinishedSession as FinS
 from core.utils.image import image_split
-from database import BotDBUtil
 
 enable_analytics = Config("enable_analytics", False)
 
 
-class FinishedSession(FinS):
+class FinishedSession(FinishedSessionT):
     async def delete(self):
-        """
-        用于删除这条消息。
-        """
         try:
             for x in self.message_id:
                 await bot.room_redact(str(self.result), x)
@@ -38,7 +36,10 @@ class MessageSession(MessageSessionT):
         embed = False
         forward = False
         delete = True
+        markdown = False
         quote = True
+        rss = True
+        typing = False
         wait = True
 
     async def send_message(
@@ -46,7 +47,8 @@ class MessageSession(MessageSessionT):
         message_chain,
         quote=True,
         disable_secret_check=False,
-        allow_split_image=True,
+        enable_parse_message=True,
+        enable_split_image=True,
         callback=None,
     ) -> FinishedSession:
         message_chain = MessageChain(message_chain)
@@ -105,7 +107,6 @@ class MessageSession(MessageSessionT):
                                 "is_falling_back": False,
                                 "m.in_reply_to": {"event_id": reply_to},
                             }
-                            pass
                         else:
                             # reply in thread
                             content["m.relates_to"] = {
@@ -128,13 +129,13 @@ class MessageSession(MessageSessionT):
                 reply_to = None
                 reply_to_user = None
 
-            if isinstance(x, Plain):
+            if isinstance(x, PlainElement):
                 content = {"msgtype": "m.notice", "body": x.text}
                 Logger.info(f"[Bot] -> [{self.target.target_id}]: {x.text}")
                 await sendMsg(content)
-            elif isinstance(x, Image):
+            elif isinstance(x, ImageElement):
                 split = [x]
-                if allow_split_image:
+                if enable_split_image:
                     Logger.info(f"Split image: {str(x.__dict__)}")
                     split = await image_split(x)
                 for xs in split:
@@ -185,7 +186,7 @@ class MessageSession(MessageSessionT):
                             f"[Bot] -> [{self.target.target_id}]: Image: {str(xs.__dict__)}"
                         )
                         await sendMsg(content)
-            elif isinstance(x, Voice):
+            elif isinstance(x, VoiceElement):
                 path = x.path
                 filename = os.path.basename(path)
                 filesize = os.path.getsize(path)
@@ -280,7 +281,7 @@ class MessageSession(MessageSessionT):
                 while text.startswith("> "):
                     text = "".join(text.splitlines(keepends=True)[1:])
             return MessageChain(Plain(text.strip()))
-        elif msgtype == "m.image":
+        if msgtype == "m.image":
             url = None
             if "url" in content:
                 url = str(content["url"])
@@ -291,7 +292,7 @@ class MessageSession(MessageSessionT):
             else:
                 Logger.error(f"Got invalid m.image message from {self.session.target}")
             return MessageChain(Image(await bot.mxc_to_http(url)))
-        elif msgtype == "m.audio":
+        if msgtype == "m.audio":
             url = str(content["url"])
             return MessageChain(Voice(await bot.mxc_to_http(url)))
         Logger.error(f"Got unknown msgtype: {msgtype}")
@@ -317,11 +318,9 @@ class MessageSession(MessageSessionT):
 
         async def __aenter__(self):
             await bot.room_typing(self.msg.session.target, True)
-            pass
 
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             await bot.room_typing(self.msg.session.target, False)
-            pass
 
 
 class FetchedSession(Bot.FetchedSession):
@@ -347,17 +346,19 @@ class FetchedSession(Bot.FetchedSession):
             Logger.info(
                 f"Could not find any exist private room for {target_id}, trying to create one."
             )
-            resp = await bot.room_create(
-                visibility=nio.RoomVisibility.private,
-                is_direct=True,
-                preset=nio.RoomPreset.trusted_private_chat,
-                invite=[target_id],
-            )
-            if resp is nio.ErrorResponse:
-                pass
-            room = resp.room_id
-            Logger.info(f"Created private messaging room for {target_id}: {room}")
-            self.session.target = room
+            try:
+                resp = await bot.room_create(
+                    visibility=nio.RoomVisibility.private,
+                    is_direct=True,
+                    preset=nio.RoomPreset.trusted_private_chat,
+                    invite=[target_id],
+                )
+                room = resp.room_id
+                Logger.info(f"Created private messaging room for {target_id}: {room}")
+                self.session.target = room
+            except Exception as e:
+                Logger.error(f"Failed to create room for {target_id}: {e}")
+                return
 
 
 Bot.FetchedSession = FetchedSession
@@ -367,13 +368,15 @@ class FetchTarget(FetchedTargetT):
     name = client_name
 
     @staticmethod
-    async def fetch_target(target_id, sender_id=None) -> FetchedSession:
-        match_channel = re.match(r"^(Matrix\|.*?)\|(.*)", target_id)
-        if match_channel:
-            target_from = sender_from = match_channel.group(1)
-            target_id = match_channel.group(2)
+    async def fetch_target(target_id, sender_id=None) -> Union[Bot.FetchedSession]:
+        target_pattern = r'|'.join(re.escape(item) for item in target_prefix_list)
+        match_target = re.match(fr"^({target_pattern})\|(.*)", target_id)
+        if match_target:
+            target_from = sender_from = match_target.group(1)
+            target_id = match_target.group(2)
             if sender_id:
-                match_sender = re.match(r"^(Matrix)\|(.*)", sender_id)
+                sender_pattern = r'|'.join(re.escape(item) for item in sender_prefix_list)
+                match_sender = re.match(fr"^({sender_pattern})\|(.*)", sender_id)
                 if match_sender:
                     sender_from = match_sender.group(1)
                     sender_id = match_sender.group(2)
@@ -384,7 +387,7 @@ class FetchTarget(FetchedTargetT):
             return session
 
     @staticmethod
-    async def fetch_target_list(target_list: list) -> List[FetchedSession]:
+    async def fetch_target_list(target_list) -> List[Bot.FetchedSession]:
         lst = []
         for x in target_list:
             fet = await FetchTarget.fetch_target(x)
@@ -393,47 +396,40 @@ class FetchTarget(FetchedTargetT):
         return lst
 
     @staticmethod
-    async def post_message(
-        module_name,
-        message,
-        user_list: List[FetchedSession] = None,
-        i18n=False,
-        **kwargs,
-    ):
+    async def post_message(module_name, message, user_list=None, i18n=False, **kwargs):
+        module_name = None if module_name == '*' else module_name
         if user_list:
             for x in user_list:
                 try:
                     msgchain = message
                     if isinstance(message, str):
                         if i18n:
-                            msgchain = MessageChain(
-                                [Plain(x.parent.locale.t(message, **kwargs))]
-                            )
+                            msgchain = MessageChain([Plain(x.parent.locale.t(message, **kwargs))])
                         else:
                             msgchain = MessageChain([Plain(message)])
                     msgchain = MessageChain(msgchain)
                     await x.send_direct_message(msgchain)
-                    if enable_analytics:
+                    if enable_analytics and module_name:
                         BotDBUtil.Analytics(x).add("", module_name, "schedule")
                 except Exception:
                     Logger.error(traceback.format_exc())
         else:
-            get_target_id = BotDBUtil.TargetInfo.get_enabled_this(module_name, "Matrix")
+            get_target_id = BotDBUtil.TargetInfo.get_target_list(module_name, client_name)
             for x in get_target_id:
                 fetch = await FetchTarget.fetch_target(x.targetId)
                 if fetch:
+                    if BotDBUtil.TargetInfo(fetch.target.target_id).is_muted:
+                        continue
                     try:
                         msgchain = message
                         if isinstance(message, str):
                             if i18n:
-                                msgchain = MessageChain(
-                                    [Plain(fetch.parent.locale.t(message, **kwargs))]
-                                )
+                                msgchain = MessageChain([Plain(fetch.parent.locale.t(message, **kwargs))])
                             else:
                                 msgchain = MessageChain([Plain(message)])
                         msgchain = MessageChain(msgchain)
                         await fetch.send_direct_message(msgchain)
-                        if enable_analytics:
+                        if enable_analytics and module_name:
                             BotDBUtil.Analytics(fetch).add("", module_name, "schedule")
                     except Exception:
                         Logger.error(traceback.format_exc())

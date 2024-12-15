@@ -2,35 +2,49 @@ import os
 
 from core.builtins import Bot, Image as BImage, Plain
 from core.component import module
+from core.constants.path import assets_path
 from core.utils.http import get_url
 from core.utils.web_render import webrender
 
-
-assets_path = os.path.abspath('./assets/arcaea')
-
-
-arc = module('arcaea', developers=['OasisAkari'], desc='{arcaea.help.desc}', doc=True,
-             alias=['a', 'arc'])
+arc_assets_path = os.path.join(assets_path, "arcaea")
 
 
-@arc.command('download {{arcaea.help.download}}')
+arc = module(
+    "arcaea",
+    developers=["OasisAkari"],
+    desc="{arcaea.help.desc}",
+    doc=True,
+    alias=["a", "arc"],
+)
+
+
+@arc.command("download {{arcaea.help.download}}")
 async def _(msg: Bot.MessageSession):
-    url = 'https://webapi.lowiro.com/webapi/serve/static/bin/arcaea/apk/'
-    resp = await get_url(webrender('source', url), 200, fmt='json', request_private_ip=True)
+    url = "https://webapi.lowiro.com/webapi/serve/static/bin/arcaea/apk/"
+    resp = await get_url(
+        webrender("source", url), 200, fmt="json", request_private_ip=True
+    )
     if resp:
-        await msg.finish(msg.locale.t("arcaea.message.download", version=resp["value"]["version"],
-                                      url=resp['value']['url']))
+        url = resp.get("value", {}).get("url")
+    if url:
+        await msg.finish(
+            msg.locale.t(
+                "arcaea.message.download", version=resp["value"]["version"], url=url
+            )
+        )
     else:
         await msg.finish(msg.locale.t("arcaea.message.get_failed"))
 
 
-@arc.command('random {{arcaea.help.random}}')
+@arc.command("random {{arcaea.help.random}}")
 async def _(msg: Bot.MessageSession):
-    url = 'https://webapi.lowiro.com/webapi/song/showcase/'
-    resp = await get_url(webrender('source', url), 200, fmt='json', request_private_ip=True)
+    url = "https://webapi.lowiro.com/webapi/song/showcase/"
+    resp = await get_url(
+        webrender("source", url), 200, fmt="json", request_private_ip=True
+    )
     if resp:
         value = resp["value"][0]
-        image = f'{assets_path}/jacket/{value["song_id"]}.jpg'
+        image = os.path.join(arc_assets_path, "jacket", f'{value["song_id"]}.jpg')
         result = [Plain(value["title"]["en"])]
         if os.path.exists(image):
             result.append(BImage(path=image))
@@ -39,27 +53,32 @@ async def _(msg: Bot.MessageSession):
         await msg.finish(msg.locale.t("arcaea.message.get_failed"))
 
 
-@arc.command('rank free {{arcaea.help.rank.free}}',
-             'rank paid {{arcaea.help.rank.paid}}')
+@arc.command(
+    "rank free {{arcaea.help.rank.free}}", "rank paid {{arcaea.help.rank.paid}}"
+)
 async def _(msg: Bot.MessageSession):
-    if msg.parsed_msg.get('free', False):
-        url = 'https://webapi.lowiro.com/webapi/song/rank/free/'
-        resp = await get_url(webrender('source', url), 200, fmt='json', request_private_ip=True)
+    if msg.parsed_msg.get("free", False):
+        url = "https://webapi.lowiro.com/webapi/song/rank/free/"
+        resp = await get_url(
+            webrender("source", url), 200, fmt="json", request_private_ip=True
+        )
     else:
-        url = 'https://webapi.lowiro.com/webapi/song/rank/paid/'
-        resp = await get_url(webrender('source', url), 200, fmt='json', request_private_ip=True)
+        url = "https://webapi.lowiro.com/webapi/song/rank/paid/"
+        resp = await get_url(
+            webrender("source", url), 200, fmt="json", request_private_ip=True
+        )
     if resp:
         r = []
         rank = 0
-        for x in resp['value']:
+        for x in resp["value"]:
             rank += 1
             r.append(f'{rank}. {x["title"]["en"]} ({x["status"]})')
-        await msg.finish('\n'.join(r))
+        await msg.finish(r)
     else:
         await msg.finish(msg.locale.t("arcaea.message.get_failed"))
 
 
-@arc.command('calc <score> <rating> {{arcaea.help.calc}}')
+@arc.command("calc <score> <rating> {{arcaea.help.calc}}")
 async def _(msg: Bot.MessageSession, score: int, rating: float):
     if score >= 10000000:
         ptt = rating + 2

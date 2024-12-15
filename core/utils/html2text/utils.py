@@ -40,7 +40,7 @@ def dumb_css_parser(data: str) -> Dict[str, Dict[str, str]]:
     data += ";"
     importIndex = data.find("@import")
     while importIndex != -1:
-        data = data[0:importIndex] + data[data.find(";", importIndex) + 1:]
+        data = data[0:importIndex] + data[data.find(";", importIndex) + 1 :]
         importIndex = data.find("@import")
 
     # parse the css. reverted from dictionary comprehension in order to
@@ -69,12 +69,10 @@ def element_style(
     """
     style = parent_style.copy()
     if "class" in attrs:
-        assert attrs["class"] is not None
         for css_class in attrs["class"].split():
             css_style = style_def.get("." + css_class, {})
             style.update(css_style)
     if "style" in attrs:
-        assert attrs["style"] is not None
         immediate_style = dumb_property_dict(attrs["style"])
         style.update(immediate_style)
 
@@ -138,7 +136,7 @@ def google_fixed_width_font(style: Dict[str, str]) -> bool:
     font_family = ""
     if "font-family" in style:
         font_family = style["font-family"]
-    return "courier new" == font_family or "consolas" == font_family
+    return font_family in ("courier new", "consolas")
 
 
 def list_numbering_start(attrs: Dict[str, Optional[str]]) -> int:
@@ -150,7 +148,6 @@ def list_numbering_start(attrs: Dict[str, Optional[str]]) -> int:
     :rtype: int or None
     """
     if "start" in attrs:
-        assert attrs["start"] is not None
         try:
             return int(attrs["start"]) - 1
         except ValueError:
@@ -230,7 +227,7 @@ def reformat_table(lines: List[str], right_margin: int) -> List[str]:
         if num_cols < max_cols:
             cols += [""] * (max_cols - num_cols)
         elif max_cols < num_cols:
-            max_width += [len(x) + right_margin for x in cols[-(num_cols - max_cols):]]
+            max_width += [len(x) + right_margin for x in cols[-(num_cols - max_cols) :]]
             max_cols = num_cols
 
         max_width = [

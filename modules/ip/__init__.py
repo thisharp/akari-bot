@@ -101,7 +101,7 @@ async def check_ip(ip: str):
 def parse_coordinate(axis: str, value: float):
     if axis == 'latitude':
         return f'{value}°{"N" if value > 0 else "S"}'
-    elif axis == 'longitude':
+    if axis == 'longitude':
         return f'{value}°{"E" if value > 0 else "W"}'
 
 
@@ -119,7 +119,7 @@ async def format_ip(msg, info: Dict[str, Any]):
         'sixtofour': msg.locale.t('ip.message.ip_property.sixtofour'),
         'teredo': msg.locale.t('ip.message.ip_property.teredo'),
         'site_local': msg.locale.t('ip.message.ip_property.site_local'),
-        'unknown': msg.locale.t('unknown')
+        'unknown': msg.locale.t('message.unknown')
     }
 
     res.append(info['ip'])

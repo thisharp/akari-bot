@@ -1,22 +1,19 @@
-import os
 import traceback
 from typing import Optional
 
-import ujson as json
+import orjson as json
 
-from config import Config
 from core.builtins import Bot, Image, MessageChain, Plain
+from core.constants.path import cache_path
 from core.logger import Logger
 from core.utils.http import post_url
 from .chunithm_mapping import *
 from .chunithm_music import Music
 
-cache_dir = os.path.abspath(Config('cache_path', './cache/'))
-
 
 async def get_info(music: Music, *details) -> MessageChain:
     info = [Plain(f"{music.id} - {music.title}")]
-    cover_path = os.path.join(cover_dir, f'{music.id}.png')
+    cover_path = os.path.join(chu_cover_path, f'{music.id}.png')
     if os.path.exists(cover_path):
         info.append(Image(cover_path))
     if details:
@@ -25,8 +22,10 @@ async def get_info(music: Music, *details) -> MessageChain:
 
 
 async def get_record(msg: Bot.MessageSession, payload: dict, use_cache: bool = True) -> Optional[str]:
-    cache_path = os.path.join(cache_dir, f'{msg.target.sender_id.replace('|', '_')}_maimai_record.json')
-    url = f"https://www.diving-fish.com/api/chunithmprober/query/player"
+    dir = os.path.join(cache_path, 'maimai-record')
+    os.makedirs(dir, exist_ok=True)
+    cache_dir = os.path.join(dir, f'{msg.target.sender_id.replace('|', '_')}_chunithm_record.json')
+    url = "https://www.diving-fish.com/api/chunithmprober/query/player"
     if 'username' in payload:
         use_cache = False
     try:
@@ -36,8 +35,8 @@ async def get_record(msg: Bot.MessageSession, payload: dict, use_cache: bool = T
                               headers={'Content-Type': 'application/json', 'accept': '*/*'},
                               fmt='json')
         if use_cache and data:
-            with open(cache_path, 'w') as f:
-                json.dump(data, f)
+            with open(cache_dir, 'wb') as f:
+                f.write(json.dumps(data))
         return data
     except Exception as e:
         if str(e).startswith('400'):
@@ -52,10 +51,10 @@ async def get_record(msg: Bot.MessageSession, payload: dict, use_cache: bool = T
                 await msg.finish(msg.locale.t("maimai.message.forbidden"))
         else:
             Logger.error(traceback.format_exc())
-        if use_cache and os.path.exists(cache_path):
+        if use_cache and os.path.exists(cache_dir):
             try:
-                with open(cache_path, 'r') as f:
-                    data = json.load(f)
+                with open(cache_dir, 'r', encoding='utf-8') as f:
+                    data = json.loads(f.read())
                 await msg.send_message(msg.locale.t("maimai.message.use_cache"))
                 return data
             except Exception:
